@@ -17,18 +17,34 @@ import BeautifulSoup
 import sys
 reload(sys) 
 sys.setdefaultencoding("utf-8")
-
+def retry(howmany):
+    '''
+        Nifty decorator stolen from 
+    '''
+    def tryIt(func, *args, **kwargs):
+        def f(*args, **kwargs):
+            attempts = 0
+            while attempts < howmany:
+                try:
+                    return func(*args, **kwargs)
+                except Exception, e:
+                    print 'Exception [%s], retryting'%e
+                    attempts += 1
+        return f
+    return tryIt
 class Desire2Download(object):
     base_url = 'https://learn.uwaterloo.ca/d2l/lp/homepage/home.d2l?ou=6606'
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
+    ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
     def __init__(self, username, password):
         self.username=username
         self.password=password
         
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
         self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
-        self.br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+        #self.br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071635 Fedora/4.0.1-1.fc9 Firefox/4.0.1')]
         
+        self.br.open(self.ping_url).read()
         
     def safe_unicode(self,obj):
         try:
@@ -36,18 +52,23 @@ class Desire2Download(object):
         except UnicodeEncodeError:
             # obj is unicode
             return unicode(obj).encode('utf-8')
-            
+    
+    @retry(3)
     def login(self):
         print 'Logging In...'
-
+        
+        #self.br.open("https://learn.uwaterloo.ca/")
         self.br.open(self.cas_login)
-
+        
         self.br.select_form(nr=0)
         self.br['username']=self.username
         self.br['password']=self.password
         response = self.br.submit().read()
         print 'Logged In'
         
+        
+    
+            
     def get_course_links(self):
         print 'Finding courses...'
         links=list()
@@ -85,6 +106,7 @@ class Desire2Download(object):
             size = '%.2fb' % bytes
         return size
     
+    @retry(3)
     def get_course_documents(self, link):
         self.br.follow_link(link)
         content_link=None
@@ -203,21 +225,28 @@ class Desire2Download(object):
                 else:
                     
                     file_name = os.path.split(url_path)[1]
-                    path_and_filename = '%s/%s'%(path,file_name.strip('/'))
                     
-                    if os.path.isfile(path_and_filename):
-                        print ' - %s (Already Saved)'%path_and_filename
-                    else:
-                        try:
-                            content = self.br.open(clean_url).read()
+                    skip = False
+                    for r in self.ignore_re:
+                        if r.match(file_name) is not None:
+                            print 'Skipping %s because it matches ignore regex "%s"'%(file_name, r.pattern)
+                            skip = True
+                    
+                    if not skip:
+                        path_and_filename = '%s/%s'%(path,file_name.strip('/'))
+                    
+                        if os.path.isfile(path_and_filename):
+                            print ' - %s (Already Saved)'%path_and_filename
+                        else:
+                            try:
+                                content = self.br.open(clean_url).read()
                             
-                            f = open(path_and_filename, 'w')
-                            f.write(content)
-                            f.close()
+                                f = open(path_and_filename, 'w')
+                                f.write(content)
+                                f.close()
                             
-                            print ' + %s (%s)'%(path_and_filename, self.convert_bytes(len(content)))
-                        except Exception, e:
-                            print 'Encountered an exception [%s] when attempting to download %s :('%(e, clean_url)
-                            print 'Skipping %s'%path_and_filename
-                        
-                        
+                                print ' + %s (%s)'%(path_and_filename, self.convert_bytes(len(content)))
+                            except Exception, e:
+                                print 'Encountered an exception [%s] when attempting to download %s :('%(e, clean_url)
+                                print 'Skipping %s'%path_and_filename
+                                    

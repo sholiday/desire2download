@@ -22,7 +22,7 @@ please [let me know](mailto:stephen.holiday@gmail.com)
 
 ## Usage ##
 Using d2d is easy:
-    ./d2d.py --username scholida     
+    ./d2d.py --username scholida -i ".*.wmv"
     Password: 
     Logging In...
     Logged In
@@ -39,6 +39,7 @@ d2d will not download a file if it has been already saved.
 """
 
 import getopt
+import re
 
 from desire2download import Desire2Download
 from getpass import getpass
@@ -62,7 +63,7 @@ please [let me know](mailto:stephen.holiday@gmail.com)
 
 Using d2d is easy:
 
-    ./d2d.py --username scholida     
+    ./d2d.py --username scholida -i ".*.wmv"
     Password: 
     Logging In...
     Logged In
@@ -80,6 +81,7 @@ Other Options:
     -h                          This help message
     -u, --username [username]   set your username
     -p, --password [password]   set your password
+    -i, --ignore  [regular exp] ignore files that match this regex
 '''
             
 class Usage(Exception):
@@ -92,12 +94,13 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hup:v", ["help", "username=", "password="])
+            opts, args = getopt.getopt(argv[1:], "hupi:v", ["help", "username=", "password=","ignore="])
         except getopt.error, msg:
             raise Usage(msg)
             
         username = None
         password = None
+        ignore_re = list()
         
         # option processing
         for option, value in opts:
@@ -109,6 +112,12 @@ def main(argv=None):
                 username = value
             if option in ("-p", "--password"):
                 password = value
+            if option in ("-i", "--ignore"):
+                try:
+                    ignore_re.append(re.compile(value))
+                except:
+                    print 'Regular Expression "%s" is invalid...'
+                    raise Usage(help_message)
                 
         if username is None:
             username = raw_input('Username: ')
@@ -118,7 +127,7 @@ def main(argv=None):
         
         # Start the actual work
         d2d = Desire2Download(username,password)
-        
+        d2d.ignore_re = ignore_re
         d2d.login()
         links = d2d.get_course_links()
         for link in links:
