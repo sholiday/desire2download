@@ -11,10 +11,15 @@ written in Ruby.
 d2d is somewhat hacky and has not been tested extensively. If you do find a bug,
 please [let me know](mailto:stephen.holiday@gmail.com)
 
+## Installation ##
+To install, just do:
+
+    python setup.py install
+
 ## Usage ##
 Using d2d is easy:
 
-    ./d2d.py --username scholida -i ".*.wmv"
+    d2d --username scholida -i ".*.wmv"
     Password: 
     Logging In...
     Logged In

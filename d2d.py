@@ -63,7 +63,7 @@ please [let me know](mailto:stephen.holiday@gmail.com)
 
 Using d2d is easy:
 
-    ./d2d.py --username scholida -i ".*.wmv"
+    d2d --username scholida -i ".*.wmv"
     Password: 
     Logging In...
     Logged In
