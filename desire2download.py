@@ -19,7 +19,7 @@ reload(sys)
 sys.setdefaultencoding("utf-8")
 def retry(howmany):
     '''
-        Nifty decorator stolen from 
+        Nifty decorator stolen from http://stackoverflow.com/a/567697/429688
     '''
     def tryIt(func, *args, **kwargs):
         def f(*args, **kwargs):
@@ -28,7 +28,7 @@ def retry(howmany):
                 try:
                     return func(*args, **kwargs)
                 except Exception, e:
-                    print 'Exception [%s], retryting'%e
+                    print 'Exception [%s], retrying'%e
                     attempts += 1
         return f
     return tryIt
