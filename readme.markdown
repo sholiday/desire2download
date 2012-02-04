@@ -14,7 +14,7 @@ please [let me know](mailto:stephen.holiday@gmail.com)
 ## Installation ##
 To install, just do:
 
-    python setup.py install
+    easy_install desire2download
 
 ## Usage ##
 Using d2d is easy:
