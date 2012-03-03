@@ -219,7 +219,8 @@ class Desire2Download(object):
                     
                 clean_url =  url.replace(' ', '%20')
                 
-                if 'https://learn.uwaterloo.ca/d2l/common/dialogs/' in url:
+                if 'https://learn.uwaterloo.ca/d2l/common/dialogs/' in url \
+                    or 'https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l' in url:
                     pass
                 
                 else:
