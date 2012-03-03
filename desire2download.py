@@ -9,7 +9,6 @@ Copyright (c) 2011 Stephen Holiday. All rights reserved.
 
 import re
 import os
-import urlparse
 import mechanize
 import BeautifulSoup
 
@@ -171,55 +170,64 @@ class Desire2Download(object):
         return document_tree
             
     def download_tree(self, root, _path=[]):
-        for k in root:
+        """Downloads the entire file tree the 
+
+        Args:
+            root: A dictionary containing the file tree.
+            _path: A list representing the path (relative to current dir) to
+                download to. Items in list are strings.
+        """
+        for item in root:
             path = _path[:]
-            node = root[k]
             
-            if type(node) is dict:
-                path.append(k)
-                self.download_tree(node, path)
+            if type(root[item]) is dict:  ## TODO: type checking is unpythonic
+                path.append(item)
+                self.download_tree(root[item], path)
             else:
-                title = k
-                url = node
                 path = '/'.join(map(lambda x: x.replace('/', '\/'), path))
-                
-                try:
-                    os.makedirs(path)
-                except:
-                    pass
-                    
-                page = self.br.open(url).read()
-                soup = BeautifulSoup.BeautifulSoup(page)
-                url = soup.find('iframe')['src']
-                url_path = url.split('?')[0]
-                split = urlparse.urlsplit(url_path)
-                if split.netloc == '':
-                    url = 'https://learn.uwaterloo.ca%s' % url_path
-                else:
-                    url = url_path
-                    url_path = split.path
-                    
-                clean_url = url.replace(' ', '%20')
-                
-                if 'https://learn.uwaterloo.ca/d2l/common/dialogs/' not in url:
-                    file_name = os.path.split(url_path)[1]
-                    
-                    skip = False
-                    for r in self.ignore_re:
-                        if r.match(file_name) is not None:
-                            print 'Skipping %s because it matches ignore regex "%s"' % (file_name, r.pattern)
-                            skip = True
-                    
-                    if not skip:
-                        path_and_filename = '%s/%s' % (path, file_name.strip('/'))
-                    
-                        if os.path.isfile(path_and_filename):
-                            print ' - %s (Already Saved)' % path_and_filename
-                        else:
-                            content = self.br.open_novisit(clean_url).read()
-                        
-                            f = open(path_and_filename, 'w')
-                            f.write(content)
-                            f.close()
-                        
-                            print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
+                self.download_file(item, root[item], path)
+
+    def download_file(self, title, url, path):
+        """Downloads a file to the specified directory.
+
+        Args:
+            title (str): Name of the file.
+            url (str): Address to the file preview page.
+            path (str): Relative path of file to make.
+        """ 
+        try:
+            os.makedirs(path)
+        except OSError as e:
+            if e.errno != 17:
+                raise e
+            pass
+            
+        page = self.br.open(url).read()
+        soup = BeautifulSoup.BeautifulSoup(page)
+        url = soup.find('iframe')['src']
+
+        ## TODO: How should this be handled. These seem to be custom pages
+        ## with content loaded via javascript, at least this one
+        ## url = https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l?ou=16733&loId=0&loIdentId=245
+        if '/d2l/common/dialogs/' in url or \
+            'https://learn.uwaterloo.ca/d2l/lor/viewer' in url:
+            print " X Unable to download web-only content %s" % title
+            return
+
+        url_path = url.split('?')[0]
+        clean_url = 'https://learn.uwaterloo.ca%s' % url_path
+        clean_url = clean_url.replace(' ', '%20')
+        file_name = os.path.split(url_path)[1]
+        for r in self.ignore_re:
+            if r.match(file_name) is not None:
+                print 'Skipping %s because it matches ignore regex "%s"' % (file_name, r.pattern)
+                return
+
+        path_and_filename = '%s/%s' % (path, file_name.strip('/'))
+        if os.path.isfile(path_and_filename):  ## TODO Can we make this smarter?
+            print ' - %s (Already Saved)' % path_and_filename
+        else:
+            content = self.br.open_novisit(clean_url).read()
+            print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
+            with open(path_and_filename, 'w') as f:
+                f.write(content)
