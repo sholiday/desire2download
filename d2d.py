@@ -137,8 +137,8 @@ def main(argv=None):
         links = d2d.get_course_links()
         for link in links:
             print link.text
-            document_tree = d2d.get_course_documents(link)
-            d2d.download_tree(document_tree, [link.text])
+            document_tree = d2d.get_course_documents(link, link.text)
+            d2d.download_tree(document_tree)
         
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
