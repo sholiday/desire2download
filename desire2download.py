@@ -33,6 +33,11 @@ def retry(howmany):
     return tryIt
 
 
+class AuthError(Exception):
+    """Raised when login credentials fail."""
+    pass
+
+
 class Desire2Download(object):
     base_url = 'https://learn.uwaterloo.ca/d2l/lp/homepage/home.d2l?ou=6606'
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
@@ -47,17 +52,18 @@ class Desire2Download(object):
  
         self.br.open(self.ping_url).read()
  
-    @retry(3)
+    #@retry(3)
     def login(self):
         print 'Logging In...'
-        
         self.br.open(self.cas_login)
-        
         self.br.select_form(nr=0)
         self.br['username'] = self.username
         self.br['password'] = self.password
         response = self.br.submit().read()
-        print 'Logged In'
+        if "Logged in as" in response:
+            print 'Logged In'
+        else:
+            raise AuthError("Your userid and/or your password are incorrect.")
         
     def get_course_links(self):
         print 'Finding courses...'
