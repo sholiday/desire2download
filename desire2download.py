@@ -43,9 +43,10 @@ class Desire2Download(object):
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
     ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, ignore_re=None):
         self.username = username
         self.password = password
+        self.ignore_re = ignore_re
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
         self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)

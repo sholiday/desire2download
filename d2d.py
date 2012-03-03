@@ -127,8 +127,7 @@ def main(argv=None):
         
         
         # Start the actual work
-        d2d = Desire2Download(username,password)
-        d2d.ignore_re = ignore_re
+        d2d = Desire2Download(username, password, ignore_re=ignore_re)
         try:
             d2d.login()
         except AuthError as e:
