@@ -72,10 +72,9 @@ class Desire2Download(object):
         self.br['username'] = self.username
         self.br['password'] = self.password
         response = self.br.submit().read()
-        if "Logged in as" in response:
-            print 'Logged In'
-        else:
+        if "Your userid and/or your password are incorrect" in response:
             raise AuthError("Your userid and/or your password are incorrect.")
+        print 'Logged In'
         
     def get_course_links(self):
         print 'Finding courses...'
