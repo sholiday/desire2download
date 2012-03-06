@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='Desire2Download',
-    version='0.1.0',
+    version='0.1.1',
     description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
     author='Stephen Holiday',
     author_email='stephen.holiday@gmail.com',
@@ -22,17 +22,16 @@ setup(name='Desire2Download',
    classifiers=[
          'Development Status :: 3 - Alpha',
          'Environment :: Console',
-         'Intended Audience :: End Users/Desktop',
          'Intended Audience :: Developers',
-         'License :: OSI Approved :: MIT License',
+         'Intended Audience :: Education',
+         'Intended Audience :: End Users/Desktop',
+         'License :: OSI Approved :: Apache Software License',
          'Operating System :: MacOS :: MacOS X',
-         'Operating System :: Unix',
          'Operating System :: POSIX',
-         'Programming Language :: Python',
+         'Operating System :: Unix',
          'Programming Language :: Python :: 2.6',
          'Programming Language :: Python :: 2.7',
-         'Intended Audience :: Education',
-         'License :: OSI Approved :: Apache Software License',
+         'Programming Language :: Python',
          'Topic :: Education',
    ],
    download_url="https://github.com/sholiday/desire2download/tarball/master",
@@ -68,5 +67,6 @@ setup(name='Desire2Download',
 
    d2d will not download a file if it has been already saved.
    
+   Credits: Stephen Holiday, Ansis Brammanis
    """
 )

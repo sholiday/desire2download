@@ -1,5 +1,4 @@
 # desire2download #
-[Stephen Holiday](http://stephenholiday.com)
 
 d2d is a tool to download all of the content from the University of Waterloo's
 new learning management system which uses Desire2Learn instead of the old Angel
@@ -32,3 +31,7 @@ Using d2d is easy:
 
 
 d2d will not download a file if it has been already saved.
+
+## Credits ##
+* [Stephen Holiday](http://stephenholiday.com)
+* [Ansis Brammanis](https://github.com/aibram)
