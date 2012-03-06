@@ -3,12 +3,21 @@
 """
 d2d.py
 
-Created by Stephen Holiday on 2011-09-15.
-Copyright (c) 2011 Stephen Holiday. All rights reserved.
+Copyright 2012 Stephen Holiday
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 # desire2download #
-[Stephen Holiday](http://stephenholiday.com)
 
 d2d is a tool to download all of the content from the University of Waterloo's
 new learning management system which uses Desire2Learn instead of the old Angel
@@ -20,9 +29,15 @@ written in Ruby.
 d2d is somewhat hacky and has not been tested extensively. If you do find a bug,
 please [let me know](mailto:stephen.holiday@gmail.com)
 
+## Installation ##
+To install, just do:
+
+    easy_install desire2download
+
 ## Usage ##
 Using d2d is easy:
-    ./d2d.py --username scholida -i ".*.wmv"
+
+    d2d --username scholida -i ".*.wmv"
     Password: 
     Logging In...
     Logged In
@@ -35,6 +50,10 @@ Using d2d is easy:
 
 
 d2d will not download a file if it has been already saved.
+
+## Credits ##
+* [Stephen Holiday](http://stephenholiday.com)
+* [Ansis Brammanis](https://github.com/aibram)
 
 """
 
