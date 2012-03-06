@@ -144,21 +144,21 @@ class Desire2Download(object):
             'children': []
         }
         ## Keeps track of current location in tree
-        stack_trace = [document_tree]
+        path_to_root = [document_tree]
 
         rows = table.findAll('tr')
         for row in rows[1:]:
-            ## Update stack trace
+            ## Update path_to_root
             columns = row.findAll('td')
             depth = len(columns) - 1
-            if len(stack_trace) >= depth:
-                stack_trace = stack_trace[:depth]
+            if len(path_to_root) >= depth:
+                path_to_root = path_to_root[:depth]
            
             cell = row.find('td', 'd_gn')
             link = cell.find("a")
 
             ## Generate new node, whether a file or dir, and append it
-            ## to the children of the current level (last in stack_trace)
+            ## to the children of the current level (last in path_to_root)
             if link:
                 ou = self._nice_regex('\?ou\=([0-9]+)', link['href'], 1)
                 tId = self._nice_regex('\&tId\=([0-9]+)', link['href'], 1)
@@ -168,7 +168,7 @@ class Desire2Download(object):
                     'name': link.getText(),
                     'url': link_href,
                 }
-                stack_trace[-1]['children'].append(node)
+                path_to_root[-1]['children'].append(node)
             else:
                 node = {
                     ## Spaces and periods are stripped from both ends of a dir
@@ -177,8 +177,8 @@ class Desire2Download(object):
                     'name': cell.getText().replace('&nbsp;', ' ').strip(". "),
                     'children': [],
                 }
-                stack_trace[-1]['children'].append(node)
-                stack_trace.append(node)  # "cd" into the new directory
+                path_to_root[-1]['children'].append(node)
+                path_to_root.append(node)  # "cd" into the new directory
 
         return document_tree
 
