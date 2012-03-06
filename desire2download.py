@@ -230,7 +230,8 @@ class Desire2Download(object):
                     
                 clean_url =  url.replace(' ', '%20')
                 
-                if 'https://learn.uwaterloo.ca/d2l/common/dialogs/' in url:
+                if 'https://learn.uwaterloo.ca/d2l/common/dialogs/' in url \
+                    or 'https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l' in url:
                     pass
                 
                 else:
@@ -249,15 +250,10 @@ class Desire2Download(object):
                         if os.path.isfile(path_and_filename):
                             print ' - %s (Already Saved)'%path_and_filename
                         else:
-                            try:
-                                content = self.br.open(clean_url).read()
-                            
-                                f = open(path_and_filename, 'w')
-                                f.write(content)
-                                f.close()
-                            
-                                print ' + %s (%s)'%(path_and_filename, self.convert_bytes(len(content)))
-                            except Exception, e:
-                                print 'Encountered an exception [%s] when attempting to download %s :('%(e, clean_url)
-                                print 'Skipping %s'%path_and_filename
-                                    
+                            content = self.br.open_novisit(clean_url).read()
+                        
+                            f = open(path_and_filename, 'w')
+                            f.write(content)
+                            f.close()
+                        
+                            print ' + %s (%s)'%(path_and_filename, self.convert_bytes(len(content)))
