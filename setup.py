@@ -34,7 +34,6 @@ setup(name='Desire2Download',
          'Programming Language :: Python',
          'Topic :: Education',
    ],
-   download_url="https://github.com/sholiday/desire2download/tarball/master",
    long_description = """
    
    d2d is a tool to download all of the content from the University of Waterloo's
