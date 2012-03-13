@@ -85,13 +85,6 @@ class Desire2Download(object):
                 links.append(link)
         return links
         
-    def _nice_regex(self, regex, content, group):
-        res = re.search(regex, content)
-        if res != None:
-            return res.group(group)
-        else:
-            return ''
-    
     def convert_bytes(self, bytes):
         """
             Stolen from http://www.5dollarwhitebox.org/drupal/node/84
@@ -159,8 +152,8 @@ class Desire2Download(object):
             ## Generate new node, whether a file or dir, and append it
             ## to the children of the current level (last in path_to_root)
             if link:
-                ou = self._nice_regex('\?ou\=([0-9]+)', link['href'], 1)
-                tId = self._nice_regex('\&tId\=([0-9]+)', link['href'], 1)
+                ou = re.search('\?ou\=([0-9]+)', link['href']).group(1)
+                tId = re.search('\&tId\=([0-9]+)', link['href']).group(1)
                 link_href = 'https://learn.uwaterloo.ca/d2l/lms/content/preview.d2l?tId=%s&ou=%s' % (tId, ou)
                 node = {
                     'type': 'file',
