@@ -27,22 +27,6 @@ import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-def retry(howmany):
-    """
-        Nifty decorator stolen from http://stackoverflow.com/a/567697/429688
-    """
-    def tryIt(func, *args, **kwargs):
-        def f(*args, **kwargs):
-            attempts = 0
-            while attempts < howmany:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    print 'Exception [%s], retrying' % e
-                    attempts += 1
-        return f
-    return tryIt
-
 
 class AuthError(Exception):
     """Raised when login credentials fail."""
@@ -54,17 +38,33 @@ class Desire2Download(object):
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
     ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
 
-    def __init__(self, username, password, ignore_re=None):
+    def __init__(self, username, password, ignore_re=None, retries=3):
         self.username = username
         self.password = password
         self.ignore_re = ignore_re
+        self.retries = retries
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
         self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
  
         self.br.open(self.ping_url).read()
- 
-    #@retry(3)
+
+    def retry(f):
+        """Decorator to retry upon timeout. D2L is slow."""
+        def retry_it(self, *args, **kargs):
+            attempts = 0
+            while attempts < self.retries:
+                try:
+                    return f(self, *args, **kargs)
+                except Exception as e:  #TODO: Important! should only catch timeouts
+                    attempts += 1
+                    if attempts >= self.retries:
+                        print "Timeout, out of retries."
+                        raise(e)
+                    print "Timeout, retrying..."
+        return retry_it
+    
+    @retry
     def login(self):
         print 'Logging In...'
         self.br.open(self.cas_login)
@@ -106,7 +106,7 @@ class Desire2Download(object):
             size = '%.2fb' % bytes
         return size
     
-    #@retry(3)
+    @retry
     def get_course_documents(self, link, course_name):
         """Produce a tree of documents for the course.
 
