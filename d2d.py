@@ -61,6 +61,7 @@ import getopt
 import re
 
 from desire2download import Desire2Download
+from desire2download import AuthError
 from getpass import getpass
 import sys
 reload(sys) 
@@ -145,14 +146,21 @@ def main(argv=None):
         
         
         # Start the actual work
-        d2d = Desire2Download(username,password)
-        d2d.ignore_re = ignore_re
-        d2d.login()
+        d2d = Desire2Download(username, password, ignore_re=ignore_re)
+        try:
+            d2d.login()
+        except (AuthError, Exception) as e:  ## TODO: replace Exception
+            print e
+            return 2
         links = d2d.get_course_links()
         for link in links:
             print link.text
-            document_tree = d2d.get_course_documents(link)
-            d2d.download_tree(document_tree, [link.text])
+            try:
+                document_tree = d2d.get_course_documents(link, link.text)
+            except Exception as e: ## TODO: replace Exception
+                print e
+                return 2
+            d2d.download_tree(document_tree)
         
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
