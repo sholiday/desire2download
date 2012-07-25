@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='Desire2Download',
-    version='0.1.2',
+    version='0.1.3',
     description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
     author='Stephen Holiday',
     author_email='stephen.holiday@gmail.com',
@@ -66,6 +66,6 @@ setup(name='Desire2Download',
 
    d2d will not download a file if it has been already saved.
    
-   Credits: Stephen Holiday, Ansis Brammanis
+   Credits: Stephen Holiday, Ansis Brammanis and Kartik Talwar
    """
 )

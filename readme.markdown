@@ -35,3 +35,4 @@ d2d will not download a file if it has been already saved.
 ## Credits ##
 * [Stephen Holiday](http://stephenholiday.com)
 * [Ansis Brammanis](https://github.com/aibram)
+* [Kartik Talwar](https://github.com/KartikTalwar)

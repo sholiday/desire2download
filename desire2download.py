@@ -79,10 +79,12 @@ class Desire2Download(object):
     def get_course_links(self):
         print 'Finding courses...'
         links = []
+        urls = []
         for link in self.br.links():
-            matches = re.match('[A-Z]+ [0-9]{3} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
-            if matches is not None:
+            matches = re.match('[A-Z]+ [0-9A-Z]{2,4} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
+            if matches is not None and link.url not in urls:
                 links.append(link)
+                urls.append(link.url)
         return links
         
     def convert_bytes(self, bytes):
