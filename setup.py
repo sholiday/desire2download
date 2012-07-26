@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-     
+
 from setuptools import setup, find_packages
 
 setup(name='Desire2Download',
-    version='0.1.3',
+    version='0.1.4',
     description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
     author='Stephen Holiday',
     author_email='stephen.holiday@gmail.com',
@@ -34,8 +34,8 @@ setup(name='Desire2Download',
          'Programming Language :: Python',
          'Topic :: Education',
    ],
-   long_description = """
-   
+   long_description="""
+
    d2d is a tool to download all of the content from the University of Waterloo's
    new learning management system which uses Desire2Learn instead of the old Angel
    based UWACE.
@@ -53,7 +53,7 @@ setup(name='Desire2Download',
    Using d2d is easy:
 
        d2d --username scholida -i ".*.wmv"
-       Password: 
+       Password:
        Logging In...
        Logged In
        Finding courses...
@@ -65,7 +65,7 @@ setup(name='Desire2Download',
 
 
    d2d will not download a file if it has been already saved.
-   
+
    Credits: Stephen Holiday, Ansis Brammanis and Kartik Talwar
    """
 )
