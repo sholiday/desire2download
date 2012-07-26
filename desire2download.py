@@ -246,7 +246,7 @@ class Desire2Download(object):
                 if e.code == 404:
                     print " X File does not exist: %s" % file_name.strip('/')
                 else:
-                    print "X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
+                    print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
             else:
                 print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
                 with open(path_and_filename, 'w') as f:
