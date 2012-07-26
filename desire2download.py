@@ -57,7 +57,7 @@ class Desire2Download(object):
             while attempts < self.retries:
                 try:
                     return f(self, *args, **kargs)
-                except Exception as e:  #TODO: Important! should only catch timeouts
+                except Exception as e:  # TODO: Important! should only catch timeouts
                     attempts += 1
                     if attempts >= self.retries:
                         print "Timeout, out of retries."
@@ -222,6 +222,12 @@ class Desire2Download(object):
             return
 
         url_path = url.split('?')[0]
+        if url_path.find('http') == 0:
+            # If this link is actually to the outside world, let it be.
+            # Technically this could be to ftp:// as well as many others.
+            clean_url = url_path
+        else:
+            clean_url = 'https://learn.uwaterloo.ca%s' % url_path
         clean_url = 'https://learn.uwaterloo.ca%s' % url_path
         clean_url = clean_url.replace(' ', '%20')
         file_name = os.path.split(url_path)[1]
@@ -231,7 +237,7 @@ class Desire2Download(object):
                 return
 
         path_and_filename = '%s/%s' % (path, file_name.strip('/'))
-        if os.path.isfile(path_and_filename):  ## TODO Can we make this smarter?
+        if os.path.isfile(path_and_filename):  # TODO Can we make this smarter?
             print ' - %s (Already Saved)' % path_and_filename
         else:
             try:
