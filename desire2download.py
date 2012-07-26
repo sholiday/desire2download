@@ -20,6 +20,7 @@ limitations under the License.
 
 import re
 import os
+import urllib2
 import mechanize
 import BeautifulSoup
 
@@ -233,7 +234,14 @@ class Desire2Download(object):
         if os.path.isfile(path_and_filename):  ## TODO Can we make this smarter?
             print ' - %s (Already Saved)' % path_and_filename
         else:
-            content = self.br.open_novisit(clean_url).read()
-            print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
-            with open(path_and_filename, 'w') as f:
-                f.write(content)
+            try:
+                content = self.br.open_novisit(clean_url).read()
+            except urllib2.HTTPError, e:
+                if e.code == 404:
+                    print " X File does not exist: %s" % file_name.strip('/')
+                else:
+                    print "X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
+            else:
+                print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
+                with open(path_and_filename, 'w') as f:
+                    f.write(content)
