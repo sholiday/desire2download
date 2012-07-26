@@ -47,7 +47,7 @@ class Desire2Download(object):
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
         self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
- 
+
         self.br.open(self.ping_url).read()
 
     def retry(f):
@@ -64,7 +64,7 @@ class Desire2Download(object):
                         raise(e)
                     print "Timeout, retrying..."
         return retry_it
-    
+
     @retry
     def login(self):
         print 'Logging In...'
@@ -76,7 +76,7 @@ class Desire2Download(object):
         if "Your userid and/or your password are incorrect" in response:
             raise AuthError("Your userid and/or your password are incorrect.")
         print 'Logged In'
-        
+
     def get_course_links(self):
         print 'Finding courses...'
         links = []
@@ -87,7 +87,7 @@ class Desire2Download(object):
                 links.append(link)
                 urls.append(link.url)
         return links
-        
+
     def convert_bytes(self, bytes):
         """
             Stolen from http://www.5dollarwhitebox.org/drupal/node/84
@@ -108,7 +108,7 @@ class Desire2Download(object):
         else:
             size = '%.2fb' % bytes
         return size
-    
+
     @retry
     def get_course_documents(self, link, course_name):
         """Produce a tree of documents for the course.
@@ -116,7 +116,7 @@ class Desire2Download(object):
         Args:
             link (str): A url to the course's page on d2l.
             course_name (str): The name of the course.
-        
+
         Returns:
             A dict representing a tree:
             {
@@ -148,7 +148,7 @@ class Desire2Download(object):
             depth = len(columns) - 1
             if len(path_to_root) >= depth:
                 path_to_root = path_to_root[:depth]
-           
+
             cell = row.find('td', 'd_gn')
             link = cell.find("a")
 
@@ -208,7 +208,7 @@ class Desire2Download(object):
             if e.errno != 17:
                 raise e
             pass
-            
+
         page = self.br.open(url).read()
         soup = BeautifulSoup.BeautifulSoup(page)
         url = soup.find('iframe')['src']
