@@ -237,7 +237,9 @@ class Desire2Download(object):
                 return
 
         path_and_filename = '%s/%s' % (path, file_name.strip('/'))
-        if os.path.isfile(path_and_filename):  # TODO Can we make this smarter?
+        if os.path.isdir(path_and_filename): # Handle empty file names
+            print ' X %s is a directory, not a file. Skipping.' % path_and_filename
+        elif os.path.isfile(path_and_filename):  # TODO Can we make this smarter?
             print ' - %s (Already Saved)' % path_and_filename
         else:
             try:
