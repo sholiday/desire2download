@@ -218,7 +218,7 @@ class Desire2Download(object):
         ## url = https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l?ou=16733&loId=0&loIdentId=245
         if '/d2l/common/dialogs/' in url or \
             'https://learn.uwaterloo.ca/d2l/lor/viewer' in url:
-            print " X Unable to download web-only content %s" % title
+            print " X Unable to download web-only content: %s" % title
             return
 
         url_path = url.split('?')[0]
@@ -242,13 +242,50 @@ class Desire2Download(object):
             print ' - %s (Already Saved)' % path_and_filename
         else:
             try:
-                content = self.br.open_novisit(clean_url).read()
+                print ' + %s' % path_and_filename
+                self.br.retrieve(clean_url, path_and_filename, self._progressBar)
+            except KeyboardInterrupt:
+                # delete the file on a keyboard interrupt
+                if os.path.exists(path_and_filename):
+                    os.remove(path_and_filename)
+                raise
             except urllib2.HTTPError, e:
                 if e.code == 404:
                     print " X File does not exist: %s" % file_name.strip('/')
                 else:
                     print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
+            except Exception, e:
+                # otherwise raise the error
+                if os.path.exists(path_and_filename):
+                    os.remove(path_and_filename)
+                else:
+                    raise
+
+    def _progressBar(self, blocknum, bs, size):
+        """
+            Stolen from https://github.com/KartikTalwar/Coursera/blob/master/coursera.py
+        """
+        if size > 0:
+            if size % bs != 0:
+                blockCount = size/bs + 1
             else:
-                print ' + %s (%s)' % (path_and_filename, self.convert_bytes(len(content)))
-                with open(path_and_filename, 'w') as f:
-                    f.write(content)
+                blockCount = size/bs
+
+            fraction = blocknum*1.0/blockCount
+            width    = 50
+
+            stars    = '*' * int(width * fraction)
+            spaces   = ' ' * (width - len(stars))
+            progress = ' ' * 3 + '%s [%s%s] (%s%%)' % (self.convert_bytes(size), stars, spaces, int(fraction * 100))
+
+            if fraction*100 < 100:
+                sys.stdout.write(progress)
+
+                if blocknum < blockCount:
+                    sys.stdout.write('\r')
+                else:
+                    sys.stdout.write('\n')
+            else:
+                sys.stdout.write(' ' * int(width * 1.5) + '\r')
+                sys.stdout.flush()
+
