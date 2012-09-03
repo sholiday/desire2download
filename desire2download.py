@@ -228,7 +228,6 @@ class Desire2Download(object):
             clean_url = url_path
         else:
             clean_url = 'https://learn.uwaterloo.ca%s' % url_path
-        clean_url = 'https://learn.uwaterloo.ca%s' % url_path
         clean_url = clean_url.replace(' ', '%20')
         file_name = os.path.split(url_path)[1]
         for r in self.ignore_re:
