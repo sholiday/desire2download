@@ -191,7 +191,7 @@ class Desire2Download(object):
             for node in root['children']:
                 self.download_tree(node, path)
         else:
-            path = '/'.join(map(lambda x: x.replace('/', '\/'), _path))
+            path = '/'.join(map(lambda x: x.replace('/', '-'), _path))
             self.download_file(root['name'], root['url'], path)
 
     def download_file(self, title, url, path):
