@@ -82,7 +82,7 @@ class Desire2Download(object):
         links = []
         urls = []
         for link in self.br.links():
-            matches = re.match('[A-Z]+ [0-9A-Z/\s]{2,15} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
+            matches = re.match('[A-Z]+ [0-9A-Z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
             if matches is not None and link.url not in urls:
                 links.append(link)
                 urls.append(link.url)
