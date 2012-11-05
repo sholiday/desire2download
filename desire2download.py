@@ -57,12 +57,17 @@ class Desire2Download(object):
             while attempts < self.retries:
                 try:
                     return f(self, *args, **kargs)
-                except Exception as e:  # TODO: Important! should only catch timeouts
-                    attempts += 1
-                    if attempts >= self.retries:
-                        print "Timeout, out of retries."
+                except urllib2.URLError as e:
+                    if isinstance(e.reason, socket.timeout):
+                        attempts += 1
+                        if attempts >= self.retries:
+                            print "Timeout, out of retries."
+                            raise(e)
+                        print "Timeout, retrying..."
+                    else: 
+                        # Not a timeout, raise exception
+                        print "Unknown exception:",e
                         raise(e)
-                    print "Timeout, retrying..."
         return retry_it
 
     @retry
