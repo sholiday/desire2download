@@ -98,8 +98,7 @@ d2d will not download a file if it has been already saved.
 
 
 Other Options:
-    -h, --help                  This help message
-    -g, --gui                   Show the user interface
+    -h                          This help message
     -u, --username [username]   set your username
     -p, --password [password]   set your password
     -i, --ignore  [regular exp] ignore files that match this regex
@@ -112,13 +111,11 @@ class Usage(Exception):
 
 
 def main(argv=None):
-    gui_mode = False
-    
     if argv is None:
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hgupi:c:v", ["help", "gui", "username=", "password=","ignore=","courses="])
+            opts, args = getopt.getopt(argv[1:], "hupi:c:v", ["help", "username=", "password=","ignore=","courses="])
         except getopt.error, msg:
             raise Usage(msg)
             
@@ -133,9 +130,6 @@ def main(argv=None):
                 verbose = True
             if option in ("-h", "--help"):
                 raise Usage(help_message)
-            if option in ("-g", "--gui"):
-                import d2dui
-                gui_mode = True
             if option in ("-u", "--username"):
                 username = value
             if option in ("-p", "--password"):
@@ -152,10 +146,7 @@ def main(argv=None):
                 except:
                     print 'Regular Expression "%s" is invalid...'
                     raise Usage(help_message)
-        
-        if gui_mode:
-            return d2dui.loadGUI(username, password, ignore_re)
-        
+                
         if username is None:
             username = raw_input('Username: ')
         if password is None:
