@@ -171,13 +171,13 @@ def main(argv=None):
             return 2
         links = d2d.get_course_links()
         for link in links:
-            isSkip = False # Use a flag to avoid nasty loop-breaking
+            is_skip = False # Use a flag to avoid nasty loop-breaking
             for r in ignore_course:
                 if r.match(link.text) is not None:
                     print 'Skipping %s because it matches regex "%s"' % (link.text, r.pattern)
-                    isSkip = True
+                    is_skip = True
             
-            if not isSkip:
+            if not is_skip:
                 print link.text
                 try:
                     document_tree = d2d.get_course_documents(link, link.text)
