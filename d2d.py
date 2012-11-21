@@ -17,9 +17,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-# desire2download #
+# Desire2Download
 
-d2d is a tool to download all of the content from the University of Waterloo's
+Download all of the content from the University of Waterloo's
 new learning management system which uses Desire2Learn instead of the old Angel
 based UWACE.
 
@@ -27,34 +27,35 @@ d2d was inspired by Jamie Wong's fabulous [UWAngel-CLI](https://github.com/phlee
 written in Ruby.
 
 d2d is somewhat hacky and has not been tested extensively. If you do find a bug,
-please [let me know](mailto:stephen.holiday@gmail.com)
+please [let us know](https://github.com/sholiday/desire2download/issues)
 
-## Installation ##
-To install, just do:
+To install, just do either:
 
-    easy_install desire2download
+   - python setup.py install
+   - pip install desire2download
 
-## Usage ##
-Using d2d is easy:
+To use d2d, just browse to the folder you want to download the files in, type
+d2d and hit enter! d2d will not download a file if it has been already saved.
 
-    d2d --username scholida -i ".*.wmv"
-    Password: 
-    Logging In...
-    Logged In
-    Finding courses...
-    ECE 224 - Fall 2011
-     + ECE 224 - Fall 2011/Labs/Lab Tools Tutorial.html (1.70K)
-     + ECE 224 - Fall 2011/Labs/Lab 1/lab1_checklist-s2010.pdf (107.65K)
-     
-    ...
+Examples:
+   - d2d
+   - d2d --username ktalwar
+   - d2d -u ktalwar -p icanhazcatz
+   - d2d -i ".*.ppt"
+   - d2d -u scholida -p hecanhazcatz -i ".*.ppt" -c "CS+"
 
+Result:
+   Username: scholida
+   Password:
+   Logging In...
+   Logged In
+   Finding courses...
+   ECE 224 - Fall 2011
+    + ECE 224 - Fall 2011/Labs/Lab Tools Tutorial.html (1.70K)
+    + ECE 224 - Fall 2011/Labs/Lab 1/lab1_checklist-s2010.pdf (107.65K)
+      ...
 
-d2d will not download a file if it has been already saved.
-
-## Credits ##
-* [Stephen Holiday](http://stephenholiday.com)
-* [Ansis Brammanis](https://github.com/aibram)
-
+Credits: Stephen Holiday, Ansis Brammanis, Kartik Talwar and Jacob Parry
 """
 
 import getopt
@@ -79,26 +80,20 @@ d2d was inspired by Jamie Wong's fabulous [UWAngel-CLI](https://github.com/phlee
 written in Ruby.
 
 d2d is somewhat hacky and has not been tested extensively. If you do find a bug,
-please [let me know](mailto:stephen.holiday@gmail.com)
+please [let us know](https://github.com/sholiday/desire2download/issues)
 
-Using d2d is easy:
+To use d2d, just browse to the folder you want to download the files in, type
+d2d and hit enter! d2d will not download a file if it has been already saved.
 
-    d2d --username scholida -i ".*.wmv"
-    Password: 
-    Logging In...
-    Logged In
-    Finding courses...
-    ECE 224 - Fall 2011
-     + ECE 224 - Fall 2011/Labs/Lab Tools Tutorial.html (1.70K)
-     + ECE 224 - Fall 2011/Labs/Lab 1/lab1_checklist-s2010.pdf (107.65K)
-     
-    ...
-    
-d2d will not download a file if it has been already saved.
+Examples:
+    - d2d
+    - d2d --username ktalwar
+    - d2d -u ktalwar -p icanhazcatz
+    - d2d -i ".*.ppt"
+    - d2d -u scholida -p hecanhazcatz -i ".*.ppt" -c "CS+"
 
-
-Other Options:
-    -h                          This help message
+Options:
+    -h  --help                  This help message
     -u, --username [username]   set your username
     -p, --password [password]   set your password
     -i, --ignore  [regular exp] ignore files that match this regex
