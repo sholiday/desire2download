@@ -19,6 +19,14 @@ please [let us know](https://github.com/sholiday/desire2download/issues)
 pip install desire2download
 ```
 
+**Hipster**
+
+```sh
+wget https://github.com/sholiday/Desire2Download/archive/master.zip
+unzip master && cd desire2download-master
+python setup.py install
+```
+
 
 ## Usage
 

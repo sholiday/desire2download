@@ -36,23 +36,33 @@ setup(name='Desire2Download',
    ],
    long_description="""
 
-   d2d is a tool to download all of the content from the University of Waterloo's
+   Download all of the content from the University of Waterloo's
    new learning management system which uses Desire2Learn instead of the old Angel
    based UWACE.
 
-   d2d was inspired by Jamie Wong's fabulous UWAngel-CLI (https://github.com/phleet/UWAngel-CLI)
+   d2d was inspired by Jamie Wong's fabulous [UWAngel-CLI](https://github.com/phleet/UWAngel-CLI)
    written in Ruby.
 
    d2d is somewhat hacky and has not been tested extensively. If you do find a bug,
-   please let me know (stephen.holiday@gmail.com).
+   please [let us know](https://github.com/sholiday/desire2download/issues)
 
-   To install, just do:
+   To install, just do either:
 
-       python setup.py install
+       - python setup.py install
+       - pip install desire2download
 
-   Using d2d is easy:
+   To use d2d, just browse to the folder you want to download the files in, type
+   d2d and hit enter! d2d will not download a file if it has been already saved.
 
-       d2d --username scholida -i ".*.wmv"
+   Examples:
+       - d2d
+       - d2d --username ktalwar
+       - d2d -u ktalwar -p icanhazcatz
+       - d2d -i ".*.ppt"
+       - d2d -u scholida -p hecanhazcatz -i ".*.ppt" -c "CS+"
+
+   Result:
+       Username: scholida
        Password:
        Logging In...
        Logged In
@@ -60,11 +70,7 @@ setup(name='Desire2Download',
        ECE 224 - Fall 2011
         + ECE 224 - Fall 2011/Labs/Lab Tools Tutorial.html (1.70K)
         + ECE 224 - Fall 2011/Labs/Lab 1/lab1_checklist-s2010.pdf (107.65K)
-
-       ...
-
-
-   d2d will not download a file if it has been already saved.
+        ...
 
    Credits: Stephen Holiday, Ansis Brammanis, Kartik Talwar and Jacob Parry
    """
