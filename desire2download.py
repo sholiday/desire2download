@@ -39,11 +39,12 @@ class Desire2Download(object):
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
     ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
 
-    def __init__(self, username, password, ignore_re=None, retries=3):
+    def __init__(self, username, password, ignore_re=None, retries=3, skip_existing=True):
         self.username = username
         self.password = password
         self.ignore_re = ignore_re
         self.retries = retries
+        self.skip_existing = skip_existing
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
         self.br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) \
@@ -245,7 +246,7 @@ class Desire2Download(object):
         path_and_filename = '%s/%s' % (path, file_name.strip('/'))
         if os.path.isdir(path_and_filename): # Handle empty file names
             print ' X %s is a directory, not a file. Skipping.' % path_and_filename
-        elif os.path.isfile(path_and_filename):  # TODO Can we make this smarter?
+        elif os.path.isfile(path_and_filename) and self.skip_existing:  # TODO Can we make this smarter?
             print ' - %s (Already Saved)' % path_and_filename
         else:
             try:

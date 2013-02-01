@@ -98,6 +98,7 @@ Options:
     -p, --password [password]   set your password
     -i, --ignore  [regular exp] ignore files that match this regex
     -c, --courses [regular exp] ignore courses that match this regex
+    -o, --overwrite             Overwrite existing files
 '''
             
 class Usage(Exception):
@@ -110,7 +111,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hupi:c:v", ["help", "username=", "password=","ignore=","courses="])
+            opts, args = getopt.getopt(argv[1:], "houpi:c:v", ["help", "username=", "password=", "ignore=", "courses=", "overwrite"])
         except getopt.error, msg:
             raise Usage(msg)
             
@@ -118,6 +119,7 @@ def main(argv=None):
         password = None
         ignore_re = list()
         ignore_course = list()
+        skip_existing_files = True
         
         # option processing
         for option, value in opts:
@@ -129,6 +131,8 @@ def main(argv=None):
                 username = value
             if option in ("-p", "--password"):
                 password = value
+            if option in ("-o", "--overwrite"):
+                skip_existing_files = False
             if option in ("-i", "--ignore"):
                 try:
                     ignore_re.append(re.compile(value))
@@ -149,7 +153,7 @@ def main(argv=None):
         
         
         # Start the actual work
-        d2d = Desire2Download(username, password, ignore_re=ignore_re)
+        d2d = Desire2Download(username, password, ignore_re=ignore_re, skip_existing=skip_existing_files)
         try:
             d2d.login()
         except (AuthError, Exception) as e:  ## TODO: replace Exception

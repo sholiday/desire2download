@@ -31,12 +31,13 @@ python setup.py install
 ## Usage
 
 
-|    **Parameters**   |    **Description**    |
-|:-------------------:|:---------------------:|
-| **u** or *username* | Your quest userid     |
-| **p** or *password* | Your quest password   |
-| **i** or *ignore*   | Ignore certain files  |
-| **c** or *courses*  | Ignore certain courses|
+|    **Parameters**    |    **Description**       |
+|:--------------------:|:------------------------:|
+| **u** or *username*  | Your quest userid        |
+| **p** or *password*  | Your quest password      |
+| **i** or *ignore*    | Ignore certain files     | 
+| **c** or *courses*   | Ignore certain courses   |
+| **o** or *overwrite* | Overwrite existing files |
 
 
 Just browse to the folder you want to download the files in, type `d2d` and hit enter!
@@ -106,9 +107,11 @@ ECE 224 - Fall 2011
    ...
 ```
 
-*d2d will not download a file if it has been already saved.*
+*d2d will not download a file if it has been already saved unless the overwrite
+option is used..*
 
-
+If you use the script in a cron job, be nice to Learn and don't re-download all
+the time. Perhaps run without overwrite every hour but with overwrite once a day.
 
 ## Credits
 
