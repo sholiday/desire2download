@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='Desire2Download',
-    version='0.1.10',
+    version='0.2.0beta',
     description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
     author='Stephen Holiday',
     author_email='stephen.holiday@gmail.com',
@@ -35,6 +35,11 @@ setup(name='Desire2Download',
          'Topic :: Education',
    ],
    long_description="""
+
+   ## Note ##
+   UWaterloo recently updated Desire2Learn to 10.1 which broke a lot of functionality and introduced bugs.
+   This update tries to mitigate some of them but there are a lot of them.
+   The main issue is that the folder structure is not preserved and sub folders are not downloaded.
 
    Download all of the content from the University of Waterloo's
    new learning management system which uses Desire2Learn instead of the old Angel
