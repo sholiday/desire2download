@@ -18,11 +18,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import re
-import os
-import urllib2
-import mechanize
 import BeautifulSoup
+import mechanize
+import os
+import re
+import urllib
+import urllib2
 
 import sys
 reload(sys)
@@ -35,7 +36,7 @@ class AuthError(Exception):
 
 
 class Desire2Download(object):
-    base_url = 'https://learn.uwaterloo.ca/d2l/lp/homepage/home.d2l?ou=6606'
+    base_url = 'https://learn.uwaterloo.ca/d2l/home/6606'
     cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
     ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
 
@@ -47,8 +48,8 @@ class Desire2Download(object):
         self.skip_existing = skip_existing
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
-        self.br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) \
-                                    Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+        self.br.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3)\
+            AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31')]
         self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 
         self.br.open(self.ping_url).read()
@@ -83,17 +84,21 @@ class Desire2Download(object):
         response = self.br.submit().read()
         if "Your userid and/or your password are incorrect" in response:
             raise AuthError("Your userid and/or your password are incorrect.")
-        print 'Logged In'
+        if "d2l" in response:
+            print 'Logged In'
+            return
+        raise AuthError("Some other login error occured.")
 
     def get_course_links(self):
         print 'Finding courses...'
         links = []
         urls = []
         for link in self.br.links():
-            matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
-            if matches is not None and link.url not in urls:
-                links.append(link)
-                urls.append(link.url)
+            if link.text is not None:
+                matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
+                if matches is not None and link.url not in urls:
+                    links.append(link)
+                    urls.append(link.url)
         return links
 
     def convert_bytes(self, bytes):
@@ -138,7 +143,6 @@ class Desire2Download(object):
         link = self.br.links(text='Content').next()  # Get content link
         page = self.br.follow_link(link).read()      # Go to content page
         soup = BeautifulSoup.BeautifulSoup(page)
-        table = soup.find(id='z_n')
 
         ## Initial document tree
         document_tree = {
@@ -146,42 +150,17 @@ class Desire2Download(object):
             'name': course_name,
             'children': []
         }
-        ## Keeps track of current location in tree
-        path_to_root = [document_tree]
 
-        rows = table.findAll('tr')
-        for row in rows[1:]:
-            ## Update path_to_root
-            columns = row.findAll('td')
-            depth = len(columns) - 1
-            if len(path_to_root) >= depth:
-                path_to_root = path_to_root[:depth]
-
-            cell = row.find('td', 'd_gn')
-            link = cell.find("a")
-
-            ## Generate new node, whether a file or dir, and append it
-            ## to the children of the current level (last in path_to_root)
-            if link:
-                ou = re.search('\?ou\=([0-9]+)', link['href']).group(1)
-                tId = re.search('\&tId\=([0-9]+)', link['href']).group(1)
-                link_href = 'https://learn.uwaterloo.ca/d2l/lms/content/preview.d2l?tId=%s&ou=%s' % (tId, ou)
-                node = {
-                    'type': 'file',
-                    'name': link.getText(),
-                    'url': link_href,
-                }
-                path_to_root[-1]['children'].append(node)
-            else:
-                node = {
-                    ## Spaces and periods are stripped from both ends of a dir
-                    ## name to avoid weirdness caused by "bullets"
-                    'type': 'dir',
-                    'name': cell.getText().replace('&nbsp;', ' ').strip(". "),
-                    'children': [],
-                }
-                path_to_root[-1]['children'].append(node)
-                path_to_root.append(node)  # "cd" into the new directory
+        for link in self.br.links(url_regex='/d2l/le/content/.+/viewContent/.+/View'):
+            ou = re.search('/content/([0-9]+)/', link.url).group(1)
+            tId = re.search('/viewContent/([0-9]+)/', link.url).group(1)
+            link_href = 'https://learn.uwaterloo.ca/d2l/le/content/%s/%s/downloadfiles/DownloadTopic' % (ou, tId)
+            
+            document_tree['children'].append({
+                'type': 'file',
+                'name': link.text,
+                'url': link_href
+                })
 
         return document_tree
 
@@ -217,57 +196,42 @@ class Desire2Download(object):
                 raise e
             pass
 
-        page = self.br.open(url).read()
-        soup = BeautifulSoup.BeautifulSoup(page)
-        url = soup.find('iframe')['src']
+        try:
+            ret = self.br.open(url)
+        except Exception, e:
+            print " X Error for %s [%s]" % (url, e)
+            return
+        
+        content_disposition = next(x for x in ret.info().headers if 'Content-Disposition' in x)
+        filename = re.findall("filename=(\S+)", content_disposition)[0]
+        filename = urllib.unquote(filename).replace('"', '')
 
-        ## TODO: How should this be handled. These seem to be custom pages
-        ## with content loaded via javascript, at least this one
-        ## url = https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l?ou=16733&loId=0&loIdentId=245
-        if '/d2l/common/dialogs/' in url or \
-            'https://learn.uwaterloo.ca/d2l/lor/viewer' in url:
-            print " X Unable to download web-only content: %s" % title
+        path_and_filename = '%s/%s' % (path, filename.strip('/'))
+
+        if os.path.isfile(path_and_filename) and self.skip_existing:  # TODO Can we make this smarter?
+            print ' - %s (Already Saved)' % path_and_filename
             return
 
-        url_path = url.split('?')[0]
-        if url_path.find('http') == 0:
-            # If this link is actually to the outside world, let it be.
-            # Technically this could be to ftp:// as well as many others.
-            clean_url = url_path
-        else:
-            clean_url = 'https://learn.uwaterloo.ca%s' % url_path
-        clean_url = clean_url.replace(' ', '%20')
-        file_name = os.path.split(url_path)[1]
-        for r in self.ignore_re:
-            if r.match(file_name) is not None:
-                print 'Skipping %s because it matches ignore regex "%s"' % (file_name, r.pattern)
-                return
-
-        path_and_filename = '%s/%s' % (path, file_name.strip('/'))
-        if os.path.isdir(path_and_filename): # Handle empty file names
-            print ' X %s is a directory, not a file. Skipping.' % path_and_filename
-        elif os.path.isfile(path_and_filename) and self.skip_existing:  # TODO Can we make this smarter?
-            print ' - %s (Already Saved)' % path_and_filename
-        else:
-            try:
-                print ' + %s' % path_and_filename
-                self.br.retrieve(clean_url, path_and_filename, self._progressBar)
-            except KeyboardInterrupt:
-                # delete the file on a keyboard interrupt
-                if os.path.exists(path_and_filename):
-                    os.remove(path_and_filename)
-                raise
-            except urllib2.HTTPError, e:
-                if e.code == 404:
-                    print " X File does not exist: %s" % file_name.strip('/')
-                else:
-                    print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
-            except Exception, e:
-                # otherwise raise the error
-                if os.path.exists(path_and_filename):
-                    os.remove(path_and_filename)
-                else:
-                    raise
+        try:
+            print ' + %s' % path_and_filename
+            self.br.retrieve(url, path_and_filename, self._progressBar)
+        except KeyboardInterrupt:
+            # delete the file on a keyboard interrupt
+            if os.path.exists(path_and_filename):
+                os.remove(path_and_filename)
+            raise
+        except urllib2.HTTPError, e:
+            if e.code == 404:
+                print " X File does not exist: %s" % file_name.strip('/')
+            else:
+                print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
+        except Exception, e:
+            # otherwise raise the error
+            if os.path.exists(path_and_filename):
+                os.remove(path_and_filename)
+            else:
+                print url
+                print e
 
     def _progressBar(self, blocknum, bs, size):
         """

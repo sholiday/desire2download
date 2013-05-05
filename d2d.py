@@ -160,6 +160,7 @@ def main(argv=None):
             print e
             return 2
         links = d2d.get_course_links()
+        trees = []
         for link in links:
             is_skip = False # Use a flag to avoid nasty loop-breaking
             for r in ignore_course:
@@ -169,13 +170,14 @@ def main(argv=None):
             
             if not is_skip:
                 print link.text
-                try:
-                    document_tree = d2d.get_course_documents(link, link.text)
-                    d2d.download_tree(document_tree)
-                except Exception as e: ## TODO: replace Exception
-                    print 'Failed to load course:', e
-                    #return 2 #don't want to fail just because of one course
-        
+                #try:
+                trees.append(d2d.get_course_documents(link, link.text))
+                #except Exception as e: ## TODO: replace Exception
+                #    print 'Failed to load course:', e
+                #    #return 2 #don't want to fail just because of one course
+        for tree in trees:
+            d2d.download_tree(tree)
+
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
         print >> sys.stderr, "\t for help use --help"
