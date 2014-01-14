@@ -23,8 +23,10 @@ import os
 import urllib2
 import mechanize
 import BeautifulSoup
+import shutil
 
 import sys
+
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
@@ -55,6 +57,7 @@ class Desire2Download(object):
 
     def retry(f):
         """Decorator to retry upon timeout. D2L is slow."""
+
         def retry_it(self, *args, **kargs):
             attempts = 0
             while attempts < self.retries:
@@ -65,12 +68,13 @@ class Desire2Download(object):
                         attempts += 1
                         if attempts >= self.retries:
                             print "Timeout, out of retries."
-                            raise(e)
+                            raise (e)
                         print "Timeout, retrying..."
-                    else: 
-                        # Not a timeout, raise exception
-                        print "Unknown exception:",e
-                        raise(e)
+                    else:
+                    # Not a timeout, raise exception
+                        print "Unknown exception:", e
+                        raise (e)
+
         return retry_it
 
     @retry
@@ -90,6 +94,7 @@ class Desire2Download(object):
         links = []
         urls = []
         for link in self.br.links():
+            link.text = link.text if link.text else ""
             matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
             if matches is not None and link.url not in urls:
                 links.append(link)
@@ -138,7 +143,7 @@ class Desire2Download(object):
         link = self.br.links(text='Content').next()  # Get content link
         page = self.br.follow_link(link).read()      # Go to content page
         soup = BeautifulSoup.BeautifulSoup(page)
-        table = soup.find(id='z_n')
+        contents = soup.find('ul', 'd2l-datalist')
 
         ## Initial document tree
         document_tree = {
@@ -149,39 +154,37 @@ class Desire2Download(object):
         ## Keeps track of current location in tree
         path_to_root = [document_tree]
 
-        rows = table.findAll('tr')
-        for row in rows[1:]:
+        sections = contents.findAll('li', 'd2l-datalist-item')
+        for section in sections:
             ## Update path_to_root
-            columns = row.findAll('td')
-            depth = len(columns) - 1
-            if len(path_to_root) >= depth:
-                path_to_root = path_to_root[:depth]
+            if section.find('h2') is None:
+                continue
+            heading = section.find('h2').getText()
 
-            cell = row.find('td', 'd_gn')
-            link = cell.find("a")
+            section_node = {
+                'type': 'dir',
+                'name': "".join(x for x in heading if x.isalnum()),
+                'children': []
+            }
+            path_to_root[-1]['children'].append(section_node)
+            path_to_section = path_to_root[-1]['children'][-1]
 
             ## Generate new node, whether a file or dir, and append it
             ## to the children of the current level (last in path_to_root)
-            if link:
-                ou = re.search('\?ou\=([0-9]+)', link['href']).group(1)
-                tId = re.search('\&tId\=([0-9]+)', link['href']).group(1)
-                link_href = 'https://learn.uwaterloo.ca/d2l/lms/content/preview.d2l?tId=%s&ou=%s' % (tId, ou)
+            for d2l_link in section.findAll('a', 'd2l-link'):
+                section_number = re.search('/content/([0-9]+)', d2l_link['href']).group(1)
+                content_number = re.search('/viewContent/([0-9]+)', d2l_link['href']).group(1)
+                link_href = 'https://learn.uwaterloo.ca/d2l/le/content/%s/topics/files/download/%s/DirectFileTopicDownload' % (
+                    section_number, content_number)
                 node = {
                     'type': 'file',
-                    'name': link.getText(),
+                    'name': d2l_link.getText(),
                     'url': link_href,
                 }
-                path_to_root[-1]['children'].append(node)
-            else:
-                node = {
-                    ## Spaces and periods are stripped from both ends of a dir
-                    ## name to avoid weirdness caused by "bullets"
-                    'type': 'dir',
-                    'name': cell.getText().replace('&nbsp;', ' ').strip(". "),
-                    'children': [],
-                }
-                path_to_root[-1]['children'].append(node)
-                path_to_root.append(node)  # "cd" into the new directory
+                path_to_section['children'].append(node)
+
+            for d2l_click in section.findAll('a', 'd2l-clickable'):
+                print(d2l_click)
 
         return document_tree
 
@@ -207,7 +210,7 @@ class Desire2Download(object):
 
         Args:
             title (str): Name of the file.
-            url (str): Address to the file preview page.
+            url (str): Address to the direct link.
             path (str): Relative path of file to make.
         """
         try:
@@ -217,33 +220,12 @@ class Desire2Download(object):
                 raise e
             pass
 
-        page = self.br.open(url).read()
-        soup = BeautifulSoup.BeautifulSoup(page)
-        url = soup.find('iframe')['src']
-
-        ## TODO: How should this be handled. These seem to be custom pages
-        ## with content loaded via javascript, at least this one
-        ## url = https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l?ou=16733&loId=0&loIdentId=245
-        if '/d2l/common/dialogs/' in url or \
-            'https://learn.uwaterloo.ca/d2l/lor/viewer' in url:
-            print " X Unable to download web-only content: %s" % title
-            return
-
-        url_path = url.split('?')[0]
-        if url_path.find('http') == 0:
-            # If this link is actually to the outside world, let it be.
-            # Technically this could be to ftp:// as well as many others.
-            clean_url = url_path
-        else:
-            clean_url = 'https://learn.uwaterloo.ca%s' % url_path
-        clean_url = clean_url.replace(' ', '%20')
-        file_name = os.path.split(url_path)[1]
         for r in self.ignore_re:
-            if r.match(file_name) is not None:
-                print 'Skipping %s because it matches ignore regex "%s"' % (file_name, r.pattern)
+            if r.match(title) is not None:
+                print 'Skipping %s because it matches ignore regex "%s"' % (title, r.pattern)
                 return
 
-        path_and_filename = '%s/%s' % (path, file_name.strip('/'))
+        path_and_filename = '%s/%s' % (path, title.strip('/'))
         if os.path.isdir(path_and_filename): # Handle empty file names
             print ' X %s is a directory, not a file. Skipping.' % path_and_filename
         elif os.path.isfile(path_and_filename) and self.skip_existing:  # TODO Can we make this smarter?
@@ -251,7 +233,9 @@ class Desire2Download(object):
         else:
             try:
                 print ' + %s' % path_and_filename
-                self.br.retrieve(clean_url, path_and_filename, self._progressBar)
+                (fn, headers) = self.br.retrieve(url, path_and_filename, self._progressBar)
+                extension = headers.subtype
+                shutil.move(path_and_filename, path_and_filename + '.' + extension) # TODO: This sucks
             except KeyboardInterrupt:
                 # delete the file on a keyboard interrupt
                 if os.path.exists(path_and_filename):
@@ -259,9 +243,9 @@ class Desire2Download(object):
                 raise
             except urllib2.HTTPError, e:
                 if e.code == 404:
-                    print " X File does not exist: %s" % file_name.strip('/')
+                    print " X File does not exist: %s" % title.strip('/')
                 else:
-                    print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
+                    print " X HTTP error %s for: %s" % (e.code, title.strip('/'))
             except Exception, e:
                 # otherwise raise the error
                 if os.path.exists(path_and_filename):
@@ -296,4 +280,3 @@ class Desire2Download(object):
             else:
                 sys.stdout.write(' ' * int(width * 1.5) + '\r')
                 sys.stdout.flush()
-
