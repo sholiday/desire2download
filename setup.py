@@ -72,6 +72,6 @@ setup(name='Desire2Download',
         + ECE 224 - Fall 2011/Labs/Lab 1/lab1_checklist-s2010.pdf (107.65K)
         ...
 
-   Credits: Stephen Holiday, Ansis Brammanis, Kartik Talwar and Jacob Parry
+   Credits: Stephen Holiday, Ansis Brammanis, Kartik Talwar, Jacob Parry and Andrew Svoboda
    """, requires=['BeautifulSoup', 'mechanize']
 )
