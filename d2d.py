@@ -65,7 +65,8 @@ from desire2download import Desire2Download
 from desire2download import AuthError
 from getpass import getpass
 import sys
-reload(sys) 
+
+reload(sys)
 sys.setdefaultencoding("utf-8")
 
 help_message = '''
@@ -100,7 +101,8 @@ Options:
     -c, --courses [regular exp] ignore courses that match this regex
     -o, --overwrite             Overwrite existing files
 '''
-            
+
+
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
@@ -111,16 +113,17 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "houpi:c:v", ["help", "username=", "password=", "ignore=", "courses=", "overwrite"])
+            opts, args = getopt.getopt(argv[1:], "houpi:c:v",
+                                       ["help", "username=", "password=", "ignore=", "courses=", "overwrite"])
         except getopt.error, msg:
             raise Usage(msg)
-            
+
         username = None
         password = None
         ignore_re = list()
         ignore_course = list()
         skip_existing_files = True
-        
+
         # option processing
         for option, value in opts:
             if option == "-v":
@@ -145,13 +148,13 @@ def main(argv=None):
                 except:
                     print 'Regular Expression "%s" is invalid...'
                     raise Usage(help_message)
-                
+
         if username is None:
             username = raw_input('Username: ')
         if password is None:
             password = getpass()
-        
-        
+
+
         # Start the actual work
         d2d = Desire2Download(username, password, ignore_re=ignore_re, skip_existing=skip_existing_files)
         try:
@@ -166,16 +169,16 @@ def main(argv=None):
                 if r.match(link.text) is not None:
                     print 'Skipping %s because it matches regex "%s"' % (link.text, r.pattern)
                     is_skip = True
-            
+
             if not is_skip:
                 print link.text
                 try:
-                    document_tree = d2d.get_course_documents(link, link.text)
+                    document_tree = d2d.get_course_documents(link.absolute_url, link.text)
                     d2d.download_tree(document_tree)
                 except Exception as e: ## TODO: replace Exception
                     print 'Failed to load course:', e
                     #return 2 #don't want to fail just because of one course
-        
+
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
         print >> sys.stderr, "\t for help use --help"

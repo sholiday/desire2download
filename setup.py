@@ -1,40 +1,40 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(name='Desire2Download',
-    version='0.1.10',
-    description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
-    author='Stephen Holiday',
-    author_email='stephen.holiday@gmail.com',
-    url='https://github.com/sholiday/desire2download',
-    py_modules=['desire2download'],
-    install_requires=(
-        'mechanize',
-        'BeautifulSoup',
-   ),
-   scripts=['d2d.py'],
-   entry_points={
-       'console_scripts': [
-           'd2d = d2d:main',
-       ]
-   },
-   classifiers=[
-         'Development Status :: 3 - Alpha',
-         'Environment :: Console',
-         'Intended Audience :: Developers',
-         'Intended Audience :: Education',
-         'Intended Audience :: End Users/Desktop',
-         'License :: OSI Approved :: Apache Software License',
-         'Operating System :: MacOS :: MacOS X',
-         'Operating System :: POSIX',
-         'Operating System :: Unix',
-         'Programming Language :: Python :: 2.6',
-         'Programming Language :: Python :: 2.7',
-         'Programming Language :: Python',
-         'Topic :: Education',
-   ],
-   long_description="""
+      version='0.2.0beta',
+      description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
+      author='Stephen Holiday',
+      author_email='stephen.holiday@gmail.com',
+      url='https://github.com/sholiday/desire2download',
+      py_modules=['desire2download'],
+      install_requires=(
+          'mechanize',
+          'BeautifulSoup',
+      ),
+      scripts=['d2d.py'],
+      entry_points={
+          'console_scripts': [
+              'd2d = d2d:main',
+          ]
+      },
+      classifiers=[
+          'Development Status :: 3 - Alpha',
+          'Environment :: Console',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Education',
+          'Intended Audience :: End Users/Desktop',
+          'License :: OSI Approved :: Apache Software License',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: POSIX',
+          'Operating System :: Unix',
+          'Programming Language :: Python :: 2.6',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python',
+          'Topic :: Education',
+      ],
+      long_description="""
 
    Download all of the content from the University of Waterloo's
    new learning management system which uses Desire2Learn instead of the old Angel
@@ -73,5 +73,5 @@ setup(name='Desire2Download',
         ...
 
    Credits: Stephen Holiday, Ansis Brammanis, Kartik Talwar and Jacob Parry
-   """
+   """, requires=['BeautifulSoup', 'mechanize']
 )
