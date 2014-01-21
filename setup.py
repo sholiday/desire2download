@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='Desire2Download',
-      version='0.2.0beta',
+      version='0.3.0beta',
       description='Download all of the content from the University of Waterloo\'s Desire2Learn LMS',
       author='Stephen Holiday',
       author_email='stephen.holiday@gmail.com',

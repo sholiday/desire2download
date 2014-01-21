@@ -101,27 +101,45 @@ class Desire2Download(object):
                 urls.append(link.url)
         return links
 
-    @staticmethod
-    def convert_bytes(byte_amt):
-        """
-            Stolen from http://www.5dollarwhitebox.org/drupal/node/84
-        """
-        byte_amt = float(byte_amt)
-        if byte_amt >= 1099511627776:
-            terabytes = byte_amt / 1099511627776
-            size = '%.2fT' % terabytes
-        elif byte_amt >= 1073741824:
-            gigabytes = byte_amt / 1073741824
-            size = '%.2fG' % gigabytes
-        elif byte_amt >= 1048576:
-            megabytes = byte_amt / 1048576
-            size = '%.2fM' % megabytes
-        elif byte_amt >= 1024:
-            kilobytes = byte_amt / 1024
-            size = '%.2fK' % kilobytes
-        else:
-            size = '%.2fb' % byte_amt
-        return size
+    def find_module_content(self, content_link, document_tree, path_to_root, top_modules, depth):
+        depth += 1
+        for module in top_modules:
+            page = self.br.open(content_link.absolute_url + '?itemIdentifier=' + module['data-key']).read()
+            soup = BeautifulSoup.BeautifulSoup(page)
+            module_content = soup.find('div', 'd2l-page-main-padding')
+
+            ## Update path_to_root
+            header = module_content.find('h1')
+            if header is None:
+                continue
+            heading = header.getText()
+
+            section_node = new_dir(sanitize_string(heading))
+            temp_path = path_to_root
+            #crawl down the document tree to the correct location
+            for i in range(depth):
+                temp_path = temp_path[-1]['children']
+
+            temp_path.append(section_node)
+            path_to_module = temp_path[-1]
+
+            is_sub_dir = False
+            for node in module_content.findAll('li', 'd2l-datalist-item'):
+                dir_header = node.find('div', 'd2l-collapsepane')
+
+                if dir_header is None:
+                    if not is_sub_dir:
+                        d2l_link = node.find('a', 'd2l-link')
+                        file_node = node_from_link(d2l_link)
+                        path_to_module['children'].append(file_node)
+                else:
+                    is_sub_dir = True
+
+            sub_modules = module.findAll('li', 'd2l-le-TreeAccordionItem')
+
+            self.find_module_content(content_link, document_tree, path_to_root, sub_modules, depth)
+        return document_tree
+
 
     @retry
     def get_course_documents(self, link, course_name):
@@ -136,13 +154,13 @@ class Desire2Download(object):
             {
                 'type': Either 'file' or 'dir',
                 'name': A string.
-                'url': Url to the file preview (if file).
+                'url': Url to the file download (if file).
                 'children': A list of children nodes (if a dir).
             }
         """
-        self.br.open(link)                    # Go to course page
-        content_link = self.br.links(text='Content').next()  # Get content link
-        page = self.br.follow_link(content_link).read()      # Go to content page
+        self.br.open(link)                                      # Go to course page
+        content_link = self.br.links(text='Content').next()     # Get content link
+        page = self.br.follow_link(content_link).read()         # Go to content page
         soup = BeautifulSoup.BeautifulSoup(page)
         contents = soup.find('ul', 'd2l-le-TreeAccordion')
 
@@ -151,50 +169,13 @@ class Desire2Download(object):
         ## Keeps track of current location in tree
         path_to_root = [document_tree]
 
-        all_sections = contents.findAll('li', 'd2l-le-TreeAccordionItem-Root')
-        sections = [a for a in all_sections if 'ContentObject.Module' in a['data-key']]
-        for section in sections:
-            page = self.br.open(content_link.absolute_url + '?itemIdentifier=' + section['data-key']).read()
-            soup = BeautifulSoup.BeautifulSoup(page)
-            node_content = soup.find('div', 'd2l-page-main-padding')
+        all_modules = contents.findAll('li', 'd2l-le-TreeAccordionItem-Root')
+        modules = [a for a in all_modules if 'ContentObject.Module' in a['data-key']]
 
-            ## Update path_to_root
-            header = node_content.find('h1')
-            if header is None:
-                continue
-            heading = header.getText()
-
-            section_node = new_dir(sanitize_string(heading))
-            path_to_root[-1]['children'].append(section_node)
-            path_to_section = path_to_root[-1]['children'][-1]
-
-            ## Generate new node, whether a file or dir, and append it
-            ## to the children of the current level (last in path_to_root)
-
-            in_sub_dirs = False
-            for node in node_content.findAll('li', 'd2l-datalist-item'):
-                dir_header = node.find('div', 'd2l-collapsepane')
-
-                if dir_header is None:
-                    if not in_sub_dirs:
-                        d2l_link = node.find('a', 'd2l-link')
-                        file_node = node_from_link(d2l_link)
-                        path_to_section['children'].append(file_node)
-                else:
-                    in_sub_dirs = True
-                    heading = dir_header.find('h2', 'd2l-heading').getText()
-                    sub_section_node = new_dir(heading)
-                    path_to_section['children'].append(sub_section_node)
-
-                    for d2l_file in dir_header.find('ul', 'd2l-datalist').findAll('li', 'd2l-datalist-item'):
-                        d2l_link = d2l_file.find('a', 'd2l-link')
-                        file_node = node_from_link(d2l_link)
-                        sub_section_node['children'].append(file_node)
-
-        return document_tree
+        return self.find_module_content(content_link, document_tree, path_to_root, modules, 0)
 
     def download_tree(self, root, _path=None):
-        """Downloads the entire file tree the
+        """Downloads the entire file tree
 
         Args:
             root: A dictionary containing the file tree.
@@ -228,7 +209,7 @@ class Desire2Download(object):
             pass
 
         info = self.br.open(url).info()
-        #Learn hides the content type... so do some extra work to find it
+        #D2L hides the content type here... so we have to do a little bit more work
         escaped_filename = info.dict['content-disposition'].split(';')[-1]
         extension = escaped_filename[escaped_filename.rfind("."): -1]
         filename = title + extension
@@ -258,7 +239,7 @@ class Desire2Download(object):
                     print " X File does not exist: %s" % filename.strip('/')
                 else:
                     print " X HTTP error %s for: %s" % (e.code, filename.strip('/'))
-            except Exception, e:
+            except Exception:
                 # otherwise raise the error
                 if os.path.exists(path_and_filename):
                     os.remove(path_and_filename)
@@ -292,6 +273,28 @@ class Desire2Download(object):
             else:
                 sys.stdout.write(' ' * int(width * 1.5) + '\r')
                 sys.stdout.flush()
+
+
+def convert_bytes(byte_amt):
+    """
+        Stolen from http://www.5dollarwhitebox.org/drupal/node/84
+    """
+    byte_amt = float(byte_amt)
+    if byte_amt >= 1099511627776:
+        terabytes = byte_amt / 1099511627776
+        size = '%.2fT' % terabytes
+    elif byte_amt >= 1073741824:
+        gigabytes = byte_amt / 1073741824
+        size = '%.2fG' % gigabytes
+    elif byte_amt >= 1048576:
+        megabytes = byte_amt / 1048576
+        size = '%.2fM' % megabytes
+    elif byte_amt >= 1024:
+        kilobytes = byte_amt / 1024
+        size = '%.2fK' % kilobytes
+    else:
+        size = '%.2fb' % byte_amt
+    return size
 
 
 def sanitize_string(string):
