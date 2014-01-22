@@ -24,6 +24,7 @@ import socket
 import urllib2
 import mechanize
 import BeautifulSoup
+from errno import EEXIST
 
 import sys
 
@@ -128,8 +129,9 @@ class Desire2Download(object):
                 dir_header = node.find('div', 'd2l-collapsepane')
 
                 if dir_header is None:
-                    if not is_sub_dir:
-                        d2l_link = node.find('a', 'd2l-link')
+                    #There can be restrictions on files being downloaded, so check first
+                    d2l_link = node.find('a', 'd2l-link')
+                    if not is_sub_dir and d2l_link:
                         file_node = node_from_link(d2l_link)
                         path_to_module['children'].append(file_node)
                 else:
@@ -204,15 +206,22 @@ class Desire2Download(object):
         try:
             os.makedirs(path)
         except OSError as e:
-            if e.errno != 17:
-                raise e
-            pass
+            if e.errno != EEXIST:
+                raise
 
-        info = self.br.open(url).info()
-        #D2L hides the content type here... so we have to do a little bit more work
-        escaped_filename = info.dict['content-disposition'].split(';')[-1]
-        extension = escaped_filename[escaped_filename.rfind("."): -1]
-        filename = title + extension
+        #Mechanize pukes trying to open the url sometimes...
+        try:
+            info = self.br.open(url).info()
+            #D2L hides the content type here... so we have to do a little bit more work
+            if 'content-disposition' in info:
+                name = info.dict['content-disposition'].split(';')[-1]
+                extension = name[name.rfind("."): -1]
+            else:
+                extension = '.' + info.subtype
+            filename = title + extension
+        except ValueError:
+            #maybe better to just return?
+            filename = title + ".pdf"
 
         for r in self.ignore_re:
             if r.match(filename) is not None:
@@ -261,7 +270,7 @@ class Desire2Download(object):
 
             stars = '*' * int(width * fraction)
             spaces = ' ' * (width - len(stars))
-            progress = ' ' * 3 + '%s [%s%s] (%s%%)' % (self.convert_bytes(size), stars, spaces, int(fraction * 100))
+            progress = ' ' * 3 + '%s [%s%s] (%s%%)' % (convert_bytes(size), stars, spaces, int(fraction * 100))
 
             if fraction * 100 < 100:
                 sys.stdout.write(progress)
@@ -302,11 +311,16 @@ def sanitize_string(string):
 
 
 def node_from_link(d2l_link):
-    section_number = re.search('/content/([0-9]+)', d2l_link['href']).group(1)
-    content_number = re.search('/viewContent/([0-9]+)', d2l_link['href']).group(1)
-    link_href = 'https://learn.uwaterloo.ca/d2l/le/content/%s/topics/files/download/%s/DirectFileTopicDownload' % (
-        section_number, content_number)
-    return new_file(d2l_link.getText(), link_href)
+    name = sanitize_string(d2l_link.getText())
+    try:
+        section_number = re.search('/content/([0-9]+)', d2l_link['href']).group(1)
+        content_number = re.search('/viewContent/([0-9]+)', d2l_link['href']).group(1)
+        link_href = 'https://learn.uwaterloo.ca/d2l/le/content/%s/topics/files/download/%s/DirectFileTopicDownload' % (
+            section_number, content_number)
+        return new_file(name, link_href)
+    except AttributeError:
+        #The link isn't associated with Learn, so take the href as is
+        return new_file(name, d2l_link['href'])
 
 
 def new_dir(name):
