@@ -20,11 +20,14 @@ limitations under the License.
 
 import re
 import os
+import socket
 import urllib2
 import mechanize
 import BeautifulSoup
+from errno import EEXIST
 
 import sys
+
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
@@ -55,22 +58,24 @@ class Desire2Download(object):
 
     def retry(f):
         """Decorator to retry upon timeout. D2L is slow."""
-        def retry_it(self, *args, **kargs):
+
+        def retry_it(self, *args, **kwargs):
             attempts = 0
             while attempts < self.retries:
                 try:
-                    return f(self, *args, **kargs)
+                    return f(self, *args, **kwargs)
                 except urllib2.URLError as e:
                     if isinstance(e.reason, socket.timeout):
                         attempts += 1
                         if attempts >= self.retries:
                             print "Timeout, out of retries."
-                            raise(e)
+                            raise e
                         print "Timeout, retrying..."
-                    else: 
-                        # Not a timeout, raise exception
-                        print "Unknown exception:",e
-                        raise(e)
+                    else:
+                    # Not a timeout, raise exception
+                        print "Unknown exception:", e
+                        raise e
+
         return retry_it
 
     @retry
@@ -90,32 +95,53 @@ class Desire2Download(object):
         links = []
         urls = []
         for link in self.br.links():
+            link.text = link.text if link.text else ""
             matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
             if matches is not None and link.url not in urls:
                 links.append(link)
                 urls.append(link.url)
         return links
 
-    def convert_bytes(self, bytes):
-        """
-            Stolen from http://www.5dollarwhitebox.org/drupal/node/84
-        """
-        bytes = float(bytes)
-        if bytes >= 1099511627776:
-            terabytes = bytes / 1099511627776
-            size = '%.2fT' % terabytes
-        elif bytes >= 1073741824:
-            gigabytes = bytes / 1073741824
-            size = '%.2fG' % gigabytes
-        elif bytes >= 1048576:
-            megabytes = bytes / 1048576
-            size = '%.2fM' % megabytes
-        elif bytes >= 1024:
-            kilobytes = bytes / 1024
-            size = '%.2fK' % kilobytes
-        else:
-            size = '%.2fb' % bytes
-        return size
+    def find_module_content(self, content_link, document_tree, path_to_root, top_modules, depth):
+        depth += 1
+        for module in top_modules:
+            page = self.br.open(content_link.absolute_url + '?itemIdentifier=' + module['data-key']).read()
+            soup = BeautifulSoup.BeautifulSoup(page)
+            module_content = soup.find('div', 'd2l-page-main-padding')
+
+            ## Update path_to_root
+            header = module_content.find('h1')
+            if header is None:
+                continue
+            heading = header.getText()
+
+            section_node = new_dir(sanitize_string(heading))
+            temp_path = path_to_root
+            #crawl down the document tree to the correct location
+            for i in range(depth):
+                temp_path = temp_path[-1]['children']
+
+            temp_path.append(section_node)
+            path_to_module = temp_path[-1]
+
+            is_sub_dir = False
+            for node in module_content.findAll('li', 'd2l-datalist-item'):
+                dir_header = node.find('div', 'd2l-collapsepane')
+
+                if dir_header is None:
+                    #There can be restrictions on files being downloaded, so check first
+                    d2l_link = node.find('a', 'd2l-link')
+                    if not is_sub_dir and d2l_link:
+                        file_node = node_from_link(d2l_link)
+                        path_to_module['children'].append(file_node)
+                else:
+                    is_sub_dir = True
+
+            sub_modules = module.findAll('li', 'd2l-le-TreeAccordionItem')
+
+            self.find_module_content(content_link, document_tree, path_to_root, sub_modules, depth)
+        return document_tree
+
 
     @retry
     def get_course_documents(self, link, course_name):
@@ -130,69 +156,36 @@ class Desire2Download(object):
             {
                 'type': Either 'file' or 'dir',
                 'name': A string.
-                'url': Url to the file preview (if file).
+                'url': Url to the file download (if file).
                 'children': A list of children nodes (if a dir).
             }
         """
-        self.br.follow_link(link)                    # Go to course page
-        link = self.br.links(text='Content').next()  # Get content link
-        page = self.br.follow_link(link).read()      # Go to content page
+        self.br.open(link)                                      # Go to course page
+        content_link = self.br.links(text='Content').next()     # Get content link
+        page = self.br.follow_link(content_link).read()         # Go to content page
         soup = BeautifulSoup.BeautifulSoup(page)
-        table = soup.find(id='z_n')
+        contents = soup.find('ul', 'd2l-le-TreeAccordion')
 
         ## Initial document tree
-        document_tree = {
-            'type': 'dir',
-            'name': course_name,
-            'children': []
-        }
+        document_tree = new_dir(course_name)
         ## Keeps track of current location in tree
         path_to_root = [document_tree]
 
-        rows = table.findAll('tr')
-        for row in rows[1:]:
-            ## Update path_to_root
-            columns = row.findAll('td')
-            depth = len(columns) - 1
-            if len(path_to_root) >= depth:
-                path_to_root = path_to_root[:depth]
+        all_modules = contents.findAll('li', 'd2l-le-TreeAccordionItem-Root')
+        modules = [a for a in all_modules if 'ContentObject.Module' in a['data-key']]
 
-            cell = row.find('td', 'd_gn')
-            link = cell.find("a")
+        return self.find_module_content(content_link, document_tree, path_to_root, modules, 0)
 
-            ## Generate new node, whether a file or dir, and append it
-            ## to the children of the current level (last in path_to_root)
-            if link:
-                ou = re.search('\?ou\=([0-9]+)', link['href']).group(1)
-                tId = re.search('\&tId\=([0-9]+)', link['href']).group(1)
-                link_href = 'https://learn.uwaterloo.ca/d2l/lms/content/preview.d2l?tId=%s&ou=%s' % (tId, ou)
-                node = {
-                    'type': 'file',
-                    'name': link.getText(),
-                    'url': link_href,
-                }
-                path_to_root[-1]['children'].append(node)
-            else:
-                node = {
-                    ## Spaces and periods are stripped from both ends of a dir
-                    ## name to avoid weirdness caused by "bullets"
-                    'type': 'dir',
-                    'name': cell.getText().replace('&nbsp;', ' ').strip(". "),
-                    'children': [],
-                }
-                path_to_root[-1]['children'].append(node)
-                path_to_root.append(node)  # "cd" into the new directory
-
-        return document_tree
-
-    def download_tree(self, root, _path=[]):
-        """Downloads the entire file tree the
+    def download_tree(self, root, _path=None):
+        """Downloads the entire file tree
 
         Args:
             root: A dictionary containing the file tree.
             _path: A list representing the path (relative to current dir) to
                 download to. Items in list are strings.
         """
+        if not _path:
+            _path = []
         if root['type'] == 'dir':
             path = _path[:]
             path.append(root['name'])
@@ -207,51 +200,44 @@ class Desire2Download(object):
 
         Args:
             title (str): Name of the file.
-            url (str): Address to the file preview page.
+            url (str): Address to the direct link.
             path (str): Relative path of file to make.
         """
         try:
             os.makedirs(path)
         except OSError as e:
-            if e.errno != 17:
-                raise e
-            pass
+            if e.errno != EEXIST:
+                raise
 
-        page = self.br.open(url).read()
-        soup = BeautifulSoup.BeautifulSoup(page)
-        url = soup.find('iframe')['src']
+        #Mechanize pukes trying to open the url sometimes...
+        try:
+            info = self.br.open(url).info()
+            #D2L hides the content type here... so we have to do a little bit more work
+            if 'content-disposition' in info:
+                name = info.dict['content-disposition'].split(';')[-1]
+                extension = name[name.rfind("."): -1]
+            else:
+                extension = '.' + info.subtype
+            filename = title + extension
+        except ValueError:
+            #maybe better to just return?
+            filename = title + ".pdf"
 
-        ## TODO: How should this be handled. These seem to be custom pages
-        ## with content loaded via javascript, at least this one
-        ## url = https://learn.uwaterloo.ca/d2l/lor/viewer/view.d2l?ou=16733&loId=0&loIdentId=245
-        if '/d2l/common/dialogs/' in url or \
-            'https://learn.uwaterloo.ca/d2l/lor/viewer' in url:
-            print " X Unable to download web-only content: %s" % title
-            return
-
-        url_path = url.split('?')[0]
-        if url_path.find('http') == 0:
-            # If this link is actually to the outside world, let it be.
-            # Technically this could be to ftp:// as well as many others.
-            clean_url = url_path
-        else:
-            clean_url = 'https://learn.uwaterloo.ca%s' % url_path
-        clean_url = clean_url.replace(' ', '%20')
-        file_name = os.path.split(url_path)[1]
         for r in self.ignore_re:
-            if r.match(file_name) is not None:
-                print 'Skipping %s because it matches ignore regex "%s"' % (file_name, r.pattern)
+            if r.match(filename) is not None:
+                print 'Skipping %s because it matches ignore regex "%s"' % (filename, r.pattern)
                 return
 
-        path_and_filename = '%s/%s' % (path, file_name.strip('/'))
-        if os.path.isdir(path_and_filename): # Handle empty file names
+        path_and_filename = '%s/%s' % (path, filename.strip('/'))
+        if os.path.isdir(os.path.join(os.getcwd(), path_and_filename)): # Handle empty file names
             print ' X %s is a directory, not a file. Skipping.' % path_and_filename
-        elif os.path.isfile(path_and_filename) and self.skip_existing:  # TODO Can we make this smarter?
+        elif os.path.isfile(
+                os.path.join(os.getcwd(), path_and_filename)) and self.skip_existing:  # TODO Can we make this smarter?
             print ' - %s (Already Saved)' % path_and_filename
         else:
             try:
                 print ' + %s' % path_and_filename
-                self.br.retrieve(clean_url, path_and_filename, self._progressBar)
+                self.br.retrieve(url, path_and_filename, self._progress_bar)
             except KeyboardInterrupt:
                 # delete the file on a keyboard interrupt
                 if os.path.exists(path_and_filename):
@@ -259,37 +245,37 @@ class Desire2Download(object):
                 raise
             except urllib2.HTTPError, e:
                 if e.code == 404:
-                    print " X File does not exist: %s" % file_name.strip('/')
+                    print " X File does not exist: %s" % filename.strip('/')
                 else:
-                    print " X HTTP error %s for: %s" % (e.code, file_name.strip('/'))
-            except Exception, e:
+                    print " X HTTP error %s for: %s" % (e.code, filename.strip('/'))
+            except Exception:
                 # otherwise raise the error
                 if os.path.exists(path_and_filename):
                     os.remove(path_and_filename)
                 else:
                     raise
 
-    def _progressBar(self, blocknum, bs, size):
+    def _progress_bar(self, block_num, bs, size):
         """
             Stolen from https://github.com/KartikTalwar/Coursera/blob/master/coursera.py
         """
         if size > 0:
             if size % bs != 0:
-                blockCount = size/bs + 1
+                block_count = size / bs + 1
             else:
-                blockCount = size/bs
+                block_count = size / bs
 
-            fraction = blocknum*1.0/blockCount
-            width    = 50
+            fraction = block_num * 1.0 / block_count
+            width = 50
 
-            stars    = '*' * int(width * fraction)
-            spaces   = ' ' * (width - len(stars))
-            progress = ' ' * 3 + '%s [%s%s] (%s%%)' % (self.convert_bytes(size), stars, spaces, int(fraction * 100))
+            stars = '*' * int(width * fraction)
+            spaces = ' ' * (width - len(stars))
+            progress = ' ' * 3 + '%s [%s%s] (%s%%)' % (convert_bytes(size), stars, spaces, int(fraction * 100))
 
-            if fraction*100 < 100:
+            if fraction * 100 < 100:
                 sys.stdout.write(progress)
 
-                if blocknum < blockCount:
+                if block_num < block_count:
                     sys.stdout.write('\r')
                 else:
                     sys.stdout.write('\n')
@@ -297,3 +283,60 @@ class Desire2Download(object):
                 sys.stdout.write(' ' * int(width * 1.5) + '\r')
                 sys.stdout.flush()
 
+
+def convert_bytes(byte_amt):
+    """
+        Stolen from http://www.5dollarwhitebox.org/drupal/node/84
+    """
+    byte_amt = float(byte_amt)
+    if byte_amt >= 1099511627776:
+        terabytes = byte_amt / 1099511627776
+        size = '%.2fT' % terabytes
+    elif byte_amt >= 1073741824:
+        gigabytes = byte_amt / 1073741824
+        size = '%.2fG' % gigabytes
+    elif byte_amt >= 1048576:
+        megabytes = byte_amt / 1048576
+        size = '%.2fM' % megabytes
+    elif byte_amt >= 1024:
+        kilobytes = byte_amt / 1024
+        size = '%.2fK' % kilobytes
+    else:
+        size = '%.2fb' % byte_amt
+    return size
+
+
+def sanitize_string(string):
+    return "".join([x for x in string if x.isalnum() or x.isspace()])
+
+
+def node_from_link(d2l_link):
+    name = sanitize_string(d2l_link.getText())
+    try:
+        section_number = re.search('/content/([0-9]+)', d2l_link['href']).group(1)
+        content_number = re.search('/viewContent/([0-9]+)', d2l_link['href']).group(1)
+        link_href = 'https://learn.uwaterloo.ca/d2l/le/content/%s/topics/files/download/%s/DirectFileTopicDownload' % (
+            section_number, content_number)
+        return new_file(name, link_href)
+    except AttributeError:
+        #The link isn't associated with Learn, so take the href as is
+        return new_file(name, d2l_link['href'])
+
+
+def new_dir(name):
+    node = _new_node('dir', name)
+    node['children'] = []
+    return node
+
+
+def new_file(name, url):
+    node = _new_node('file', name)
+    node['url'] = url
+    return node
+
+
+def _new_node(node_type, name):
+    return {
+        'type': node_type,
+        'name': name
+    }
