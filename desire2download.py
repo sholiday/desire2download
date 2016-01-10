@@ -2,15 +2,11 @@
 # encoding: utf-8
 """
 desire2download.py
-
 Copyright 2012 Stephen Holiday
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
    http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import json
 import re
 import os
 import socket
@@ -39,7 +36,8 @@ class AuthError(Exception):
 
 class Desire2Download(object):
     base_url = 'https://learn.uwaterloo.ca/d2l/lp/homepage/home.d2l?ou=6606'
-    cas_login = 'https://cas.uwaterloo.ca/cas/login?service=http%3a%2f%2flearn.uwaterloo.ca%2fd2l%2forgtools%2fCAS%2fDefault.aspx'
+    process_login = 'https://learn.uwaterloo.ca/d2l/lp/auth/login/ProcessLoginActions.d2l'
+    cas_login = 'https://cas.uwaterloo.ca/cas/login?service=https%3a%2f%2flearn.uwaterloo.ca%2fd2l%2fcustom%2fcas%3ftarget%3d%252fd2l%252fhome'
     ping_url = 'http://jobminestats.appspot.com/Ping/ag5zfmpvYm1pbmVzdGF0c3IMCxIFUGl4ZWwYuRcM.gif'
 
     def __init__(self, username, password, ignore_re=None, retries=3, skip_existing=True):
@@ -50,9 +48,9 @@ class Desire2Download(object):
         self.skip_existing = skip_existing
 
         self.br = mechanize.Browser(factory=mechanize.RobustFactory())
-        self.br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) \
-                                    Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
-        self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+        self.br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko')]
+        self.br.set_handle_refresh(True)
+        self.br.set_handle_redirect(True)
 
         self.br.open(self.ping_url).read()
 
@@ -88,18 +86,21 @@ class Desire2Download(object):
         response = self.br.submit().read()
         if "Your userid and/or your password are incorrect" in response:
             raise AuthError("Your userid and/or your password are incorrect.")
+        self.br.open(self.process_login)
         print 'Logged In'
 
     def get_course_links(self):
         print 'Finding courses...'
+        historicalCourses = json.loads(self.br.open('https://learn.uwaterloo.ca/d2l/api/lp/1.0/enrollments/myenrollments/').read())
+        historicalCourses = historicalCourses['Items']
         links = []
-        urls = []
-        for link in self.br.links():
-            link.text = link.text if link.text else ""
-            matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}', link.text)
-            if matches is not None and link.url not in urls:
+        for course in historicalCourses:
+            matches = re.match('[A-Z]+ [0-9A-Za-z/\s]{2,45} - [A-Z][a-z]+ 20[0-9]{2}.*', course['OrgUnit']['Name'])
+            if matches is not None:
+                link = lambda: None
+                link.text = course['OrgUnit']['Name']
+                link.absolute_url = 'https://learn.uwaterloo.ca/d2l/lp/ouHome/home.d2l?ou=' + str(course['OrgUnit']['Id'])
                 links.append(link)
-                urls.append(link.url)
         return links
 
     def find_module_content(self, content_link, document_tree, path_to_root, top_modules, depth):
@@ -146,11 +147,9 @@ class Desire2Download(object):
     @retry
     def get_course_documents(self, link, course_name):
         """Produce a tree of documents for the course.
-
         Args:
             link (str): A url to the course's page on d2l.
             course_name (str): The name of the course.
-
         Returns:
             A dict representing a tree:
             {
@@ -178,7 +177,6 @@ class Desire2Download(object):
 
     def download_tree(self, root, _path=None):
         """Downloads the entire file tree
-
         Args:
             root: A dictionary containing the file tree.
             _path: A list representing the path (relative to current dir) to
@@ -197,7 +195,6 @@ class Desire2Download(object):
 
     def download_file(self, title, url, path):
         """Downloads a file to the specified directory.
-
         Args:
             title (str): Name of the file.
             url (str): Address to the direct link.
